@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script type="text/javascript">
+function set_openid(openid, pr)
+{
+    u = openid.search('<username>')
+    if (u != -1) {
+        // openid requires username
+        user = prompt('Enter your ' + pr + ' username:')
+        openid = openid.substr(0, u) + user
+    }
+    document.forms['login'].elements['login'].value = openid
+}
+</script>
+
+	<h1>Sign In</h1>
+	<form action="" method="post" name="login">
+		{{ form.hidden_tag() }}
+        <p>
+	        Login: {{ form.login(size=20) }}
+	        <br>
+                {% for error in form.login.errors %}
+					<span style="color: #ff0000;">[{{ error }}]</span>
+				{% endfor %}
+	    </p>
+		<p>
+            Password: {{ form.password(size=20) }}
+	        <br>
+				{% for error in form.password.errors %}
+					<span style="color: red;">[{{ error }}]</span>
+				{% endfor %}
+        </p>
+        <p>{{ form.remember_me }} Remember Me</p>
+        <p><input type="submit" value="Sign In"></p>
+	</form>
+{% endblock %}
