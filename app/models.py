@@ -1,6 +1,7 @@
 from app import db
 from . import lm
 from werkzeug.security import generate_password_hash, check_password_hash
+from hashlib import md5
 
 @lm.user_loader
 def load_user(user_id):
@@ -13,7 +14,6 @@ class User(db.Model):
 	nickname = db.Column(db.String(64), index=True, unique=True)
 	email = db.Column(db.String(120), index=True, unique=True)
 	password_hash = db.Column(db.String(120))
-	password_hash2 = db.Column(db.String(120))
 	tasks_to_do = db.relationship("Tasks", backref="worker", lazy="dynamic", foreign_keys='[Tasks.assigned_to]')
 	assigned_tasks = db.relationship("Tasks", backref="manager", lazy="dynamic", foreign_keys='[Tasks.assigned_by]')
 
@@ -48,6 +48,10 @@ class User(db.Model):
 
 	def __repr__(self):
 		return '<User {}>'.format(self.nickname)
+
+	def avatar(self, size):
+		return 'http://www.gravatar.com/avatar/{}?d=mm&s={}'.\
+			format(md5(self.email.encode('utf-8')).hexdigest(), size)
 
 
 class Tasks(db.Model):
