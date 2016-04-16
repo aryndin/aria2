@@ -9,13 +9,17 @@ def load_user(user_id):
 
 
 class User(db.Model):
-	__tablename__ = "user"
+	__tablename__ = "users"
 	id = db.Column(db.Integer, primary_key=True)
 	nickname = db.Column(db.String(64), index=True, unique=True)
 	email = db.Column(db.String(120), index=True, unique=True)
+	group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
+	credit = db.Column(db.Numeric(precision=8.3))
 	password_hash = db.Column(db.String(120))
-	tasks_to_do = db.relationship("Tasks", backref="worker", lazy="dynamic", foreign_keys='[Tasks.assigned_to]')
-	assigned_tasks = db.relationship("Tasks", backref="manager", lazy="dynamic", foreign_keys='[Tasks.assigned_by]')
+	tasks_to_do = db.relationship("Task", backref="worker", lazy="dynamic", foreign_keys='[Task.assigned_to]')
+	assigned_tasks = db.relationship("Task", backref="manager", lazy="dynamic", foreign_keys='[Task.assigned_by]')
+
+
 
 	@property
 	def is_authenticated(self):
@@ -54,13 +58,109 @@ class User(db.Model):
 			format(md5(self.email.encode('utf-8')).hexdigest(), size)
 
 
-class Tasks(db.Model):
+class Task(db.Model):
+	__tablename__ = 'tasks'
 	id = db.Column(db.Integer, primary_key=True)
 	assigned_by = db.Column(db.Integer, db.ForeignKey(User.id))
 	assigned_to = db.Column(db.Integer, db.ForeignKey(User.id))
 	body = db.Column(db.String(140))
 	timestamp = db.Column(db.DateTime)
+	timelimit = db.Column(db.DateTime)
+	price = db.Column(db.Numeric(precision=8.3))
 	state = db.Column(db.Boolean)
 
 	def __repr__(self):
 		return '<Task %r>' % (self.body)
+
+class Group(db.Model):
+	__tablename__ = 'groups'
+	id = db.Column(db.Integer)
+	name = db.Column(db.String(64))
+	access_level = db.Column(db.Integer)
+	users = db.relationship('User', backref = 'group')
+
+
+class Supplier(db.Model):
+	__tablename__ = 'suppliers'
+	id = db.Column(db.Integer, primary_key=True)
+	name = db.Column(db.String(128))
+	shipment = db.relationship('Shipment', backref='supplier', lazy='dynamic')
+
+
+class Shipment(db.Model):
+	__tablename__ = 'shipments'
+	id = db.Column(db.Integer, primary_key=True)
+	id_supplier = db.Column(db.Integer, db.ForeignKey(Supplier.id))
+	date = db.Column(db.Date)
+	thing = db.relationship('Invoice', back_populates='shipment', cascade="save-update, merge, delete, delete-orphan")
+
+
+class Invoice(db.Model):
+	__tablename__ = 'invoices'
+	shipment_id = db.Column(db.Integer, db.ForeignKey('shipments.id'), primary_key=True)
+	thing_id = db.Column(db.Integer, db.ForeignKey('thing.id'), primary_key=True)
+	amount = db.Column(db.Numeric(precision=8.3))
+	price = db.Column(db.Numeric(precision=8.3))
+	shipment = db.relationship('Shipment', back_populates='thing')
+	thing = db.relationship('Thing', back_populates='shipment')
+
+
+class Thing(db.Model):
+	__tablename__ = 'things'
+	id = db.Column(db.Integer, primary_key=True)
+	name = db.Column(db.String(128))
+	shipment = db.relationship('Invoice', back_populates='thing', cascade="save-update, merge, delete, delete-orphan")
+	measure_id = db.Column(db.Integer, db.ForeignKey('measures.id'))
+	stock = db.Column(db.Numeric(precision=8.3))
+	price = db.Column(db.Numeric(precision=8.3))
+	type_id = db.Column(db.Integer, db.ForeignKey('types_of_things.id'))
+	consist_of = db.relationship('ConsistOf', foreign_keys='[ConsistOf.thing_id]',
+								 backref=db.backref('thing', lazy='joined'),
+								 lazy='dynamic',
+								 cascade='all, delete-orphan')
+
+	part_of = db.relationship('ConsistOf', foreign_keys='[ConsistOf.part_id]',
+								 backref=db.backref('part', lazy='joined'),
+								 lazy='dynamic',
+								 cascade='all, delete-orphan')
+	products = db.relationship('Product', backref='product')
+
+
+class TypeOfThing(db.Model):
+	__tablename__ = 'types_of_things'
+	id = db.Column(db.Integer)
+	name = db.Column(db.String(64))
+	assembled = db.Column(db.Boolean, default=False)
+	marketable = db.Column(db.Boolean, default=False)
+	things = db.relationship('Thing', backref='type')
+
+
+class Measure(db.Model):
+	__tablename__ = 'measures'
+	id = db.Column(db.Integer, primary_key=True)
+	name = db.Column(db.String(64))
+	things_measures = db.relationship('Thing', backref='measure')
+
+
+class ConsistOf(db.Model):
+	__tablename__ = 'consist_of'
+	thing_id = db.Column(db.Integer, db.ForeignKey('thing.id'), primary_key=True)
+	part_id = db.Column(db.Integer, db.ForeignKey('thing.id'), primary_key=True)
+	amount = db.Column(db.Numeric(precision=8.3))
+
+class Product(db.Model):
+	__tablename__ = 'products'
+	id = db.Column(db.Integer, primary_key=True)
+	product_id = db.Column(db.Integer, db.ForeignKey('things.id'))
+	assembly_date = db.Column(db.DateTime)
+	assembler = db.relationship('User',
+								secondary=product_assembler,
+								backref=db.backref('products', lazy='dynamic'),
+								lazy='dynamic')
+
+
+product_assembler = db.Table('product_assembler',
+							 db.Column('assembler_id', db.Integer, db.ForeignKey('users.id')),
+							 db.Column('product_id', db.Integer, db.ForeignKey('products.id')))
+
+

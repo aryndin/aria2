@@ -34,9 +34,11 @@ def login():
 	form = LoginForm()
 	if form.validate_on_submit():
 		user = User.query.filter_by(email=form.login.data).first()
-		print(user.nickname)
-		print(type(user.nickname))
+
+
 		if user is not None and user.verify_password(form.password.data):
+			print(user.nickname)
+			print(type(user.nickname))
 			login_user(user, form.remember_me.data)
 			return redirect(request.args.get('next') or url_for('index'))
 		flash('Invalid username or/and password')

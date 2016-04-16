@@ -22,23 +22,5 @@
 {% endblock page_header %}
 
 {% block page_body %}
-	<form action="" method="post" name="login" id="">
-		{{ form.hidden_tag() }}
-		<p>
-			{{ form.login.label }} {{ form.login(size=20) }}
-			<br>
-				{% for error in form.login.errors %}
-					<span style="color: #ff0000;">[{{ error }}]</span>
-				{% endfor %}
-		</p>
-		<p>
-			{{ form.password.label}} {{ form.password(size=20) }}
-			<br>
-				{% for error in form.password.errors %}
-					<span style="color: red;">[{{ error }}]</span>
-				{% endfor %}
-		</p>
-		<p>{{ form.remember_me }} {{ form.remember_me.label }}</p>
-		<p><input type="submit" value="Sign In"></p>
-	</form>
+	{{ wtf.quick_form(form) }}
 {% endblock page_body %}
