@@ -74,7 +74,7 @@ class Task(db.Model):
 
 class Group(db.Model):
 	__tablename__ = 'groups'
-	id = db.Column(db.Integer)
+	id = db.Column(db.Integer, primary_key=True)
 	name = db.Column(db.String(64))
 	access_level = db.Column(db.Integer)
 	users = db.relationship('User', backref = 'group')
@@ -128,7 +128,7 @@ class Thing(db.Model):
 
 class TypeOfThing(db.Model):
 	__tablename__ = 'types_of_things'
-	id = db.Column(db.Integer)
+	id = db.Column(db.Integer, primary_key=True)
 	name = db.Column(db.String(64))
 	assembled = db.Column(db.Boolean, default=False)
 	marketable = db.Column(db.Boolean, default=False)
@@ -154,7 +154,7 @@ class Product(db.Model):
 	product_id = db.Column(db.Integer, db.ForeignKey('things.id'))
 	assembly_date = db.Column(db.DateTime)
 	assembler = db.relationship('User',
-								secondary=product_assembler,
+								secondary='product_assembler',
 								backref=db.backref('products', lazy='dynamic'),
 								lazy='dynamic')
 
