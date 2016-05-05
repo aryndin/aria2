@@ -1,3 +1,4 @@
+{% import "helpers/render_flash_messages.html" as rfm %}
 {% extends "bootstrap/base.html" %}
 {% block head %}
 	{{ super() }}
@@ -26,30 +27,32 @@
 		</div>
 		<div class="navbar-collapse collapse">
 			<ul class="nav navbar-nav">
-				<li><a href="{{ url_for('index') }}">Home</a></li>
+				<li><a href="{{ url_for('main.index') }}">Home</a></li>
 				{% if current_user.is_authenticated %}
-					<li><a href="{{ url_for('user', nickname=current_user.nickname) }}">Personal page</a></li>
-					<li><a href="{{ url_for('logout') }}">Sign out</a></li>
-				{% else %}
-					<li><a href="{{ url_for('login') }}">Sign in</a></li>
+					<li><a href="{{ url_for('main.user', nickname=current_user.nickname) }}">Personal page</a></li>
 				{% endif %}
 			</ul>
+			<ul class="nav navbar-nav navbar-right">
+                {% if current_user.is_authenticated %}
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                        Account <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
+                {% endif %}
+            </ul>
 		</div>
 	</div>
 </div>
 {% endblock navbar %}
 {% block content %}
 	<div class="container">
-		{% with messages = get_flashed_messages() %}
-			{% if messages %}
-				{% for message in messages %}
-					<div class="alert alert-warning fade in">
-						<button type="button" class="close" data-dismiss="alert">&cross;</button>
-						{{ message }}
-					</div>
-				{% endfor %}
-			{% endif %}
-		{% endwith %}
+		{{ rfm.show_messages() }}
 		<div class="page-header">
 			{% block page_header %}{% endblock page_header %}
 		</div>

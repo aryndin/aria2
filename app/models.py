@@ -2,16 +2,33 @@ from app import db
 from . import lm
 from werkzeug.security import generate_password_hash, check_password_hash
 from hashlib import md5
+from flask.ext.login import AnonymousUserMixin
 
 @lm.user_loader
 def load_user(user_id):
 	return User.query.get(int(user_id))
 
 
+class Permission:
+	BASIC = 0x01
+	USER_M = 0x02
+	DEPOT_M = 0x04
+	SALE_M = 0x08
+	ADMINISTRATING = 0x80
+
+
+class AnonymousUser(AnonymousUserMixin):
+	def is_allowed(self, Permission):
+		return False
+
+lm.anonymous_user = AnonymousUser
+
+
 class User(db.Model):
 	__tablename__ = "users"
 	id = db.Column(db.Integer, primary_key=True)
 	nickname = db.Column(db.String(64), index=True, unique=True)
+	fullname = db.Column(db.String(128))
 	email = db.Column(db.String(120), index=True, unique=True)
 	group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
 	credit = db.Column(db.Numeric(precision=8.3))
@@ -19,7 +36,14 @@ class User(db.Model):
 	tasks_to_do = db.relationship("Task", backref="worker", lazy="dynamic", foreign_keys='[Task.assigned_to]')
 	assigned_tasks = db.relationship("Task", backref="manager", lazy="dynamic", foreign_keys='[Task.assigned_by]')
 
+	def __init__(self, **kwargs):  # TODO ?
+		super(User, self).__init__(**kwargs)
+		if self.group is None:
+			self.group = Group.query.filter_by(access_level=Permission.BASIC).first()
 
+	def is_allowed(self, permissions):
+		return self.group is not None and \
+			   (self.group.access_level & permissions) == permissions
 
 	@property
 	def is_authenticated(self):
@@ -70,14 +94,39 @@ class Task(db.Model):
 	state = db.Column(db.Boolean)
 
 	def __repr__(self):
-		return '<Task %r>' % (self.body)
+		return '<Task {}>'.format(self.body)
+
 
 class Group(db.Model):
 	__tablename__ = 'groups'
 	id = db.Column(db.Integer, primary_key=True)
 	name = db.Column(db.String(64))
 	access_level = db.Column(db.Integer)
-	users = db.relationship('User', backref = 'group')
+	users = db.relationship('User', backref='group')
+
+	def __repr__(self):
+		return '<Group {}>'.format(self.name)
+
+
+	@staticmethod
+	def insert_roles():
+		groups = {
+			'User': Permission.BASIC,
+			'Manager': (Permission.DEPOT_M |
+						Permission.SALE_M |
+						Permission.USER_M),
+			'Administrator': 0xff
+		}
+
+		for g in groups:
+			group = Group.query.filter_by(name=g).first()
+			if group is None:
+				group = Group(name=g)
+			group.access_level = groups[g]
+			db.session.add(group)
+		db.session.commit()
+
+
 
 
 class Supplier(db.Model):
@@ -98,7 +147,7 @@ class Shipment(db.Model):
 class Invoice(db.Model):
 	__tablename__ = 'invoices'
 	shipment_id = db.Column(db.Integer, db.ForeignKey('shipments.id'), primary_key=True)
-	thing_id = db.Column(db.Integer, db.ForeignKey('thing.id'), primary_key=True)
+	thing_id = db.Column(db.Integer, db.ForeignKey('things.id'), primary_key=True)
 	amount = db.Column(db.Numeric(precision=8.3))
 	price = db.Column(db.Numeric(precision=8.3))
 	shipment = db.relationship('Shipment', back_populates='thing')
@@ -144,8 +193,8 @@ class Measure(db.Model):
 
 class ConsistOf(db.Model):
 	__tablename__ = 'consist_of'
-	thing_id = db.Column(db.Integer, db.ForeignKey('thing.id'), primary_key=True)
-	part_id = db.Column(db.Integer, db.ForeignKey('thing.id'), primary_key=True)
+	thing_id = db.Column(db.Integer, db.ForeignKey('things.id'), primary_key=True)
+	part_id = db.Column(db.Integer, db.ForeignKey('things.id'), primary_key=True)
 	amount = db.Column(db.Numeric(precision=8.3))
 
 class Product(db.Model):
