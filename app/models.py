@@ -15,7 +15,7 @@ class Permission:
 	DEPOT_M = 0x04
 	SALE_M = 0x08
 	ADMINISTRATING = 0x80
-	ADMINISTRATING2 = 0x81
+	ADMINISTRATING2 = 0x82
 
 
 class AnonymousUser(AnonymousUserMixin):
